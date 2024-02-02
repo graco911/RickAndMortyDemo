@@ -3,6 +3,8 @@ package com.gracodev.rickmortydemo.presentation.activities
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.StaggeredGridLayoutManager
 import com.gracodev.rickmortydemo.data.model.CharacterResponse
 import com.gracodev.rickmortydemo.databinding.MainActivityLayoutBinding
 import com.gracodev.rickmortydemo.presentation.adapters.CharacterAdapter
@@ -63,7 +65,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun setUpRecyclerView() {
         binding.recyclerView.apply {
-            layoutManager = GridLayoutManager(context, 2)
+            layoutManager = LinearLayoutManager(context)
             adapter = characterAdapter
         }
     }

@@ -1,6 +1,8 @@
 package com.gracodev.rickmortydemo.presentation.adapters
 
+import android.transition.TransitionManager
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.gracodev.rickmortydemo.data.model.CharacterData
@@ -35,6 +37,8 @@ class CharacterAdapter(
 
     inner class ViewHolder(val binding: CharacterItemLayoutBinding) :
         RecyclerView.ViewHolder(binding.root) {
+        private var isLayoutVisible = false
+
         fun bind(character: CharacterData) {
             binding.apply {
                 Picasso.get().load(character.image).into(imageCharacter)
@@ -58,6 +62,14 @@ class CharacterAdapter(
 
                 property6.propertyTitle.text = "Location"
                 property6.propertySubtitle.text = character.location.name
+
+                btnViewDetail.setOnClickListener {
+                    TransitionManager.beginDelayedTransition(fullContent)
+                    isLayoutVisible = !isLayoutVisible
+                    fullContent.visibility = if (isLayoutVisible) View.VISIBLE else View.GONE
+
+                    btnViewDetail.text = if (isLayoutVisible) "Ocultar Detalle" else  "Ver Detalle"
+                }
             }
         }
     }
