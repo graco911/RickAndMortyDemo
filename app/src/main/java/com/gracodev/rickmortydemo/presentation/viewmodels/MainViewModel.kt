@@ -1,26 +1,34 @@
 package com.gracodev.rickmortydemo.presentation.viewmodels
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import com.gracodev.rickmortydemo.data.model.CharacterData
 import com.gracodev.rickmortydemo.data.model.CharacterResponse
 import com.gracodev.rickmortydemo.data.repository.RickAndMortyRepository
-import com.gracodev.rickmortydemo.presentation.states.UIStates
+import com.gracodev.rickmortydemo.domain.usecases.UseCaseResult
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 class MainViewModel(private val rickAndMortyRepository: RickAndMortyRepository) : BaseViewModel() {
 
-    private val _getCharactersResultLiveData = MutableLiveData<UIStates<CharacterResponse>>()
-    val getCharacterResponseResultLiveData:
-            LiveData<UIStates<CharacterResponse>> = _getCharactersResultLiveData
+    private val _characters = MutableStateFlow(emptyList<CharacterData>())
+    val characters: StateFlow<List<CharacterData>> = _characters
 
 
     fun getCharacters(page: Int) {
-        _getCharactersResultLiveData.value = UIStates.Loading
         viewModelScope.launch(Dispatchers.IO) {
-            val result = rickAndMortyRepository.getCharacters(page)
-            _getCharactersResultLiveData.postValue(result.toUIStates())
+
+            val characterResponse = when (
+                val result =
+                    rickAndMortyRepository.getCharacters(page)) {
+                is UseCaseResult.Success -> result.data as CharacterResponse
+                else -> {
+                    return@launch
+                }
+            }
+
+            _characters.value = characterResponse.results
         }
     }
 
