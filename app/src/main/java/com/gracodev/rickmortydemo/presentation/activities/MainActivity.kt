@@ -5,7 +5,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -13,10 +16,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -30,10 +39,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.gracodev.rickmortydemo.data.model.CharacterData
+import com.gracodev.rickmortydemo.presentation.states.UIStates
 import com.gracodev.rickmortydemo.presentation.viewmodels.MainViewModel
 import com.gracodev.rickmortydemo.ui.theme.RickMortyDemoTheme
 import kotlinx.coroutines.launch
@@ -51,15 +60,41 @@ class MainActivity : ComponentActivity() {
                 Surface(
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    CharactersScreen(mainViewModel)
+                    ScaffoldApp()
                 }
             }
         }
     }
 
     @Composable
-    fun CharactersScreen(viewModel: MainViewModel) {
+    fun ScaffoldApp() {
+        val snackbarHostState = remember {
+            SnackbarHostState()
+        }
+        Scaffold(
+            snackbarHost = {
+                SnackbarHost(hostState = snackbarHostState)
+            },
+            topBar = { TopAppBar() },
+            content = { innerPadding ->
+                CharactersScreen(
+                    viewModel = mainViewModel,
+                    snackbarHostState = snackbarHostState,
+                    contentPadding = innerPadding
+                )
+            }
+        )
+    }
+
+    @Composable
+    fun CharactersScreen(
+        viewModel: MainViewModel,
+        snackbarHostState: SnackbarHostState,
+        contentPadding: PaddingValues
+    ) {
         val scope = rememberCoroutineScope()
+        val characters by viewModel.characters.collectAsState()
+        val loading by remember { mutableStateOf(false) }
 
         LaunchedEffect(Unit) {
             scope.launch {
@@ -67,11 +102,56 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        val characters by viewModel.characters.collectAsState()
+        LaunchedEffect(characters) {
+            when (val uiState = characters) {
+                is UIStates.Error -> {
+                    snackbarHostState.showSnackbar(
+                        "Error: ${uiState.message}"
+                    )
+                }
 
-        CharactersList(characters)
+                is UIStates.Success -> {
+                    snackbarHostState.showSnackbar("Peticion correcta")
+                }
+            }
+        }
+
+        when (val uiState = characters) {
+            is UIStates.Loading -> {
+                LoadingIndicator(!loading)
+            }
+
+            is UIStates.Success -> {
+                uiState.value?.let { CharactersList(it.results) }
+            }
+        }
     }
-    
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    private fun TopAppBar() {
+        TopAppBar(title = { Text("Rick & Morty API") })
+    }
+
+    @Composable
+    fun LoadingIndicator(isVisible: Boolean) {
+
+        AnimatedVisibility(visible = isVisible) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                CircularProgressIndicator(
+                    color = MaterialTheme.colorScheme.secondary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            }
+
+        }
+    }
+
     @Composable
     private fun CharactersList(characters: List<CharacterData>) {
         LazyColumn {
@@ -86,8 +166,7 @@ class MainActivity : ComponentActivity() {
                             .fillMaxWidth()
                     ) {
                         AsyncImage(
-                            modifier = Modifier
-                                .fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth(),
                             model = character.image,
                             contentDescription = "Image",
                             contentScale = ContentScale.Crop
@@ -121,8 +200,7 @@ class MainActivity : ComponentActivity() {
                             visible = expanded
                         ) {
                             Column(
-                                Modifier
-                                    .padding(40.dp)
+                                Modifier.padding(40.dp)
                             ) {
                                 Text(
                                     fontWeight = FontWeight.Medium,
